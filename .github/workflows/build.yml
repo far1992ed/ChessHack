@@ -25,20 +25,29 @@ jobs:
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
     - name: Build APK
       run: |
-        mkdir -p build/src/com/kanha/chesshack build/res/values build/assets
+        # البحث عن الملفات في أي مكان ووضعها في مجلد البناء
+        mkdir -p build/src/com/kanha/chesshack build/assets
         find . -name "AndroidManifest.xml" -exec cp {} build/AndroidManifest.xml \;
-        find . -name "strings.xml" -exec cp {} build/res/values/strings.xml \;
         find . -name "MainActivity.java" -exec cp {} build/src/com/kanha/chesshack/MainActivity.java \;
         find . -name "hack.js" -exec cp {} build/assets/hack.js \;
+        
         cd build
-        aapt package -f -m -J gen -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-33/android.jar
-        javac -source 1.8 -target 1.8 -cp $ANDROID_HOME/platforms/android-33/android.jar -d obj gen/com/kanha/chesshack/R.java src/com/kanha/chesshack/MainActivity.java
+        
+        # ترجمة جافا مباشرة (بدون الحاجة لملف R.java)
+        javac -source 1.8 -target 1.8 -cp $ANDROID_HOME/platforms/android-33/android.jar -d obj src/com/kanha/chesshack/MainActivity.java
+        
+        # تحويل الكود إلى dex
         d8 --lib $ANDROID_HOME/platforms/android-33/android.jar --output . obj/com/kanha/chesshack/*.class
-        aapt package -f -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-33/android.jar -F app.apk
+        
+        # تجميع الـ APK وإضافة الملفات
+        aapt package -f -M AndroidManifest.xml -I $ANDROID_HOME/platforms/android-33/android.jar -F app.apk
         aapt add app.apk classes.dex
         aapt add app.apk assets/hack.js
+        
+        # التوقيع
         keytool -genkey -v -keystore my.keystore -alias mykey -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Android"
         apksigner sign --ks my.keystore --ks-pass pass:password --key-pass pass:password --out ChessHack.apk app.apk
+        
         mkdir -p $GITHUB_WORKSPACE/output
         cp ChessHack.apk $GITHUB_WORKSPACE/output/
     - name: Upload APK Artifact
