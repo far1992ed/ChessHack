@@ -25,9 +25,14 @@ jobs:
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
     - name: Build APK
       run: |
-        cd src/main
+        mkdir -p build/src/com/kanha/chesshack build/res/values build/assets
+        find . -name "AndroidManifest.xml" -exec cp {} build/AndroidManifest.xml \;
+        find . -name "strings.xml" -exec cp {} build/res/values/strings.xml \;
+        find . -name "MainActivity.java" -exec cp {} build/src/com/kanha/chesshack/MainActivity.java \;
+        find . -name "hack.js" -exec cp {} build/assets/hack.js \;
+        cd build
         aapt package -f -m -J gen -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-33/android.jar
-        javac -source 1.8 -target 1.8 -cp $ANDROID_HOME/platforms/android-33/android.jar -d obj gen/com/kanha/chesshack/R.java java/com/kanha/chesshack/MainActivity.java
+        javac -source 1.8 -target 1.8 -cp $ANDROID_HOME/platforms/android-33/android.jar -d obj gen/com/kanha/chesshack/R.java src/com/kanha/chesshack/MainActivity.java
         d8 --lib $ANDROID_HOME/platforms/android-33/android.jar --output . obj/com/kanha/chesshack/*.class
         aapt package -f -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-33/android.jar -F app.apk
         aapt add app.apk classes.dex
